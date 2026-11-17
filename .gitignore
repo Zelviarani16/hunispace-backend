@@ -1,0 +1,13 @@
+.env
+.env.*
+!.env.example
+
+hunispace
+hunispace.exe
+*.exe
+
+.vscode/
+.idea/
+.DS_Store
+logs/
+coverage.out

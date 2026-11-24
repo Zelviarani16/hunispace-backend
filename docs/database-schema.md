@@ -84,4 +84,4 @@ Kolom `version` dan `updated_at` ditambahkan di luar rancangan awal sebagai dasa
 ## Catatan rancangan
 
 - Nilai uang memakai `NUMERIC(12,2)`. Di Go dipetakan ke `float64` untuk kesederhanaan boilerplate; untuk produksi sebaiknya memakai tipe desimal.
-- Status `overdue` pada invoice belum diatur otomatis. Dapat ditambahkan nanti lewat job terjadwal.
+- Status `overdue` diatur lewat `POST /invoices/mark-overdue` (dipanggil owner atau job terjadwal di tahap lanjut). Alasan penolakan bukti bayar disimpan di kolom `rejection_note` (migrasi 006).

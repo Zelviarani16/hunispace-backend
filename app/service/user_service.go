@@ -23,6 +23,7 @@ func NewUserService(pool *pgxpool.Pool, users repository.UserRepository, jwt *he
 	return &UserService{pool: pool, users: users, jwt: jwt}
 }
 
+// Register: POST /api/v1/auth/register. Akun baru SELALU berperan tenant.
 func (s *UserService) Register(c *fiber.Ctx) error {
 	var req model.RegisterRequest
 	if err := helper.ParseBody(c, &req); err != nil {
@@ -31,7 +32,7 @@ func (s *UserService) Register(c *fiber.Ctx) error {
 	req.Email = strings.ToLower(strings.TrimSpace(req.Email))
 	req.FullName = strings.TrimSpace(req.FullName)
 
-	if fields := validateRegister(req); len(fields) > 0 {
+	if fields := ValidateRegister(req); len(fields) > 0 {
 		return helper.Validation(fields)
 	}
 
@@ -108,4 +109,71 @@ func (s *UserService) EnsureOwner(ctx context.Context, name, email, password str
 		Email:        strings.ToLower(strings.TrimSpace(email)),
 		PasswordHash: hash,
 	})
+}
+
+func (s *UserService) UpdateMe(c *fiber.Ctx) error {
+	var req model.UpdateProfileRequest
+	if err := helper.ParseBody(c, &req); err != nil {
+		return err
+	}
+	if fields := ValidateProfileUpdate(req); len(fields) > 0 {
+		return helper.Validation(fields)
+	}
+	ctx := c.UserContext()
+	auth := helper.CurrentUser(c)
+	current, err := s.users.FindByID(ctx, s.pool, auth.UserID)
+	if err != nil {
+		return lookupError(err, "pengguna")
+	}
+	name, phone := current.FullName, current.PhoneNumber
+	if req.FullName != nil {
+		name = strings.TrimSpace(*req.FullName)
+	}
+	if req.PhoneNumber != nil {
+		phone = *req.PhoneNumber
+	}
+	user, err := s.users.UpdateProfile(ctx, s.pool, auth.UserID, name, phone)
+	if err != nil {
+		return lookupError(err, "pengguna")
+	}
+	return helper.Success(c, fiber.StatusOK, "profil berhasil diperbarui", user)
+}
+
+func (s *UserService) ChangePassword(c *fiber.Ctx) error {
+	var req model.ChangePasswordRequest
+	if err := helper.ParseBody(c, &req); err != nil {
+		return err
+	}
+	if fields := ValidateChangePassword(req); len(fields) > 0 {
+		return helper.Validation(fields)
+	}
+	ctx := c.UserContext()
+	auth := helper.CurrentUser(c)
+	user, err := s.users.FindByID(ctx, s.pool, auth.UserID)
+	if err != nil {
+		return lookupError(err, "pengguna")
+	}
+	if !helper.VerifyPassword(user.PasswordHash, req.OldPassword) {
+		return helper.Unauthorized("password lama salah")
+	}
+	hash, err := helper.HashPassword(req.NewPassword)
+	if err != nil {
+		return helper.Internal(err)
+	}
+	if err := s.users.UpdatePassword(ctx, s.pool, auth.UserID, hash); err != nil {
+		return lookupError(err, "pengguna")
+	}
+	return helper.Success(c, fiber.StatusOK, "password berhasil diubah", nil)
+}
+
+func (s *UserService) List(c *fiber.Ctx) error {
+	role := c.Query("role")
+	if role != "" && role != model.RoleOwner && role != model.RoleTenant {
+		return helper.BadRequest("role harus owner atau tenant")
+	}
+	users, err := s.users.FindAll(c.UserContext(), s.pool, role)
+	if err != nil {
+		return helper.Internal(err)
+	}
+	return helper.Success(c, fiber.StatusOK, "daftar pengguna berhasil diambil", users)
 }

@@ -1,0 +1,11 @@
+.git
+.env
+.env.*
+!.env.example
+*.md
+docs/*.md
+tests
+logs
+coverage.out
+hunispace
+hunispace.exe

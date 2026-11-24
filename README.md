@@ -55,7 +55,7 @@ HuniSpace mendigitalisasi proses tersebut lewat REST API yang dapat diintegrasik
 
 Proyek menerapkan **Clean Architecture** (mengikuti `latihan-fiber` di modul perkuliahan). **Tidak ada lapisan controller maupun handler**: fungsi penanganan HTTP berada di dalam `service`, sedangkan `route` hanya mendaftarkan path dan middleware.
 
-```
+```text
 route → service → repository → database
            │            │
            └─── model ──┘
@@ -73,20 +73,20 @@ Aturan arah ketergantungan: **lapisan atas memanggil lapisan bawah, tidak pernah
 
 ### Struktur Folder
 
-```
+```text
 hunispace/
 ├── main.go                 # bootstrap server, migration, graceful shutdown, info umum Swagger
 ├── config/                 # pemuat environment (.env via godotenv)
 ├── database/               # koneksi pgxpool dan migration runner
 ├── helper/                 # AppError, response, JWT, bcrypt, parser request
 ├── middleware/             # RequireAuth, RequireRole, ErrorResponse
-├── migrations/             # 001_users … 005_maintenance_tickets, 006_invoice_rejection
+├── migrations/             # 001_users … 005_maintenance_tickets, 006_invoice_rejection, embed.go
 ├── route/                  # route.go + satu berkas route per modul
 ├── app/
 │   ├── model/              # user, room, lease, invoice, maintenance, common
 │   ├── repository/         # kontrak (interface) dan implementasi per modul
 │   └── service/            # service, *_rules.go (aturan murni, fungsi diekspor), anotasi Swagger
-├── tests/                  # unit test aturan murni (package tests), terpisah dari kode
+├── tests/                  # unit test aturan murni (package tests) dan tests/integration/
 ├── Dockerfile              # image aplikasi
 ├── docker-compose.yml      # container aplikasi + PostgreSQL
 └── docs/                   # workflow, SOP modul, skema database, dokumentasi API, hasil swag init
@@ -320,23 +320,31 @@ Invoke-RestMethod -Uri http://localhost:3000/api/v1/rooms -Headers @{ Authorizat
 
 ---
 
-## Alur Git
+## Alur Git & Kebijakan Branch
 
-```
-main (commit awal) → feat/core-auth (Zelvia, PR #1)
-                   → feat/room-lease (Drefita, PR #2)
-                   → feat/invoice-maintenance (Putri, PR #3)
-                   → docs/project-docs (Zelvia, PR #4)
+Proyek ini menerapkan kebijakan **1 Anggota = 1 Branch Permanen** dari awal hingga akhir pengembangan untuk memantau kontribusi individual secara transparan dan berkelanjutan.
+
+### Pemetaan Branch Anggota:
+
+| Anggota | Nama Branch | Modul Tanggung Jawab |
+|---|---|---|
+| Zelvia Rani F.D.S. | `zelvia` | Fondasi (Config, DB, Middleware, Route), Modul `users`, Docker, Integrasi |
+| Drefita Putri C. | `drefita` | Modul `rooms`, `leases`, `dashboard`, dan dokumentasi Swagger UI |
+| Putri Apriliana | `putri` | Modul `invoices`, `maintenance_tickets`, dan dokumentasi API Markdown |
+
+### Siklus Integrasi Branch:
+
+```text
+main (baseline) ──┬──> zelvia  ──(PR)──> main (merged)
+                  ├──> drefita ──(PR)──> main (merged)
+                  └──> putri   ──(PR)──> main (merged)
 ```
 
-- Setiap anggota bekerja di branch sendiri dengan **micro commit** (1 commit = 1 perubahan kecil).
-- Semua perubahan ke `main` wajib lewat **Pull Request**.
-- Git Master mereview (`go build`, `go vet`, `go test`) lalu merge dengan **Create a merge commit**, bukan Squash. Hal tersebut agar commit tiap anggota tetap terlihat di riwayat.
-- Urutan merge mengikuti ketergantungan: fondasi → rooms+leases → invoices+maintenance.
+> **Catatan Riwayat:** Pull Request #1 s.d. #4 di tahap awal proyek sempat menggunakan penamaan branch berbasis fitur (`feat/core-auth`, `feat/room-lease`, `feat/invoice-maintenance`, `docs/project-docs`). Seluruh riwayat commit tersebut telah dipetakan dan dilanjutkan secara permanen ke branch masing-masing anggota.
 
-Konvensi commit: `type(scope): deskripsi`. Contoh:
-```
-feat(lease): add lease service with transaction and row lock against double booking
-test(invoice): add table-driven tests for billing period validation
-docs(readme): add project description, features, roles, and database design
-```
+### Aturan Kolaborasi Tim:
+1. **Branch Terisolasi:** Setiap anggota hanya membuat commit pada branch miliknya sendiri (`zelvia`, `drefita`, atau `putri`).
+2. **Micro Commit:** Setiap commit mencakup 1 perubahan logis dengan format Conventional Commits (`feat`, `refactor`, `chore`, `docs`, `test`).
+3. **Pull Request & Code Review:** Semua penggabungan ke `main` wajib melalui Pull Request dan direview oleh Git Master (`go build`, `go vet`, `go test`).
+4. **Create a Merge Commit:** Git Master melakukan merge dengan opsi **Create a merge commit** (bukan *Squash* atau *Rebase*), sehingga seluruh riwayat commit individu tetap utuh dan tercatat di `main`.
+5. **Branch Permanen:** Setelah merge, branch anggota **tidak pernah dihapus**, melainkan terus digunakan untuk iterasi pekerjaan berikutnya dengan menyelaraskan `main` (`git merge origin/main`).

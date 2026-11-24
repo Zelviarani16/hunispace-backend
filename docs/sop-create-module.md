@@ -1,6 +1,6 @@
 # SOP: Membuat Modul Baru
 
-Prosedur baku menambah modul dengan endpoint CRUD. Modul `rooms` adalah **acuan**.
+Prosedur baku menambah modul dengan endpoint CRUD. Modul `rooms` adalah **acuan**: bila ragu, buka berkas padanannya. Contoh di bawah memakai modul fiktif `announcement` (pengumuman).
 
 ## Ringkasan langkah
 
@@ -15,13 +15,13 @@ Prosedur baku menambah modul dengan endpoint CRUD. Modul `rooms` adalah **acuan*
 Berkas yang dibuat (semua milik pemilik modul, tidak menyentuh berkas bersama):
 
 ```text
-migrations/006_announcements.sql
+migrations/007_announcements.sql
 app/model/announcement.go
 app/repository/announcement_repository.go
 app/service/announcement_rules.go
-app/service/announcement_rules_test.go
 app/service/announcement_service.go
 route/announcement_route.go
+tests/announcement_rules_test.go
 ```
 
 ## Langkah 1: Migration
@@ -78,7 +78,7 @@ Gunakan pola yang sudah ada: `scanXxx(row rowScanner)`, `mapNotFound(err)` untuk
 
 ## Langkah 4: Aturan murni + test
 
-Validasi ditulis sebagai fungsi murni yang mengembalikan `map[string]string` (pesan per field; kosong berarti valid), lalu diuji dengan test table-driven.
+Validasi ditulis sebagai fungsi murni yang mengembalikan `map[string]string` (pesan per field; kosong berarti valid), lalu diuji dengan test table-driven di folder `tests/` (package `tests`). Karena test berada di luar package `service`, nama fungsi aturan harus diawali huruf besar (misalnya `ValidateAnnouncement`).
 
 ```go
 func validateAnnouncement(req model.AnnouncementCreateRequest) map[string]string {
@@ -133,6 +133,10 @@ func init() {
 	})
 }
 ```
+
+## Langkah 6b: Anotasi Swagger
+
+Tambahkan blok anotasi swaggo TEPAT di atas setiap method service (contoh: `@Summary`, `@Tags`, `@Param`, `@Success`, `@Failure`, `@Router`; lihat `app/service/room_service.go`). Tidak boleh ada baris kosong antara komentar dan `func`. Lalu jalankan `go tool swag init` dan commit hasilnya di folder `docs/`.
 
 ## Langkah 7: Build, test, commit
 

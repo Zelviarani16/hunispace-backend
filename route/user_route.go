@@ -15,5 +15,9 @@ func init() {
 		auth.Post("/register", svc.Register)
 		auth.Post("/login", svc.Login)
 		auth.Get("/me", d.Auth, svc.Me)
+		auth.Patch("/me", d.Auth, svc.UpdateMe)
+		auth.Post("/change-password", d.Auth, svc.ChangePassword)
+
+		api.Get("/users", d.Auth, d.Owner, svc.List)
 	})
 }

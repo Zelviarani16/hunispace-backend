@@ -1,0 +1,48 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?isi DB_PASSWORD di berkas .env}
+      POSTGRES_DB: hunispace
+    volumes:
+      - hunispace-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d hunispace"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  app:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${HOST_PORT:-8080}:3000"
+    environment:
+      APP_PORT: "3000"
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_USER: postgres
+      DB_PASSWORD: ${DB_PASSWORD:?isi DB_PASSWORD di berkas .env}
+      DB_NAME: hunispace
+      DB_SSLMODE: disable
+      DATABASE_URL: ""
+      JWT_SECRET: ${JWT_SECRET:?isi JWT_SECRET (minimal 32 karakter) di berkas .env}
+      AUTO_MIGRATE: "true"
+      MIGRATIONS_DIR: ""
+      SWAGGER_ENABLED: ${SWAGGER_ENABLED:-false}
+      SEED_OWNER_NAME: ${SEED_OWNER_NAME:-Pemilik Kos}
+      SEED_OWNER_EMAIL: ${SEED_OWNER_EMAIL:-}
+      SEED_OWNER_PASSWORD: ${SEED_OWNER_PASSWORD:-}
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+volumes:
+  hunispace-data:

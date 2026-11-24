@@ -35,3 +35,13 @@ type LoginResponse struct {
 	ExpiresIn   int    `json:"expires_in"`
 	User        User   `json:"user"`
 }
+
+type UpdateProfileRequest struct {
+	FullName    *string `json:"full_name"`
+	PhoneNumber *string `json:"phone_number"`
+}
+
+type ChangePasswordRequest struct {
+	OldPassword string `json:"old_password"`
+	NewPassword string `json:"new_password"`
+}

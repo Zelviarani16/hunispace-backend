@@ -18,6 +18,7 @@ func init() {
 		tickets := api.Group("/tickets", d.Auth)
 		tickets.Get("/mine", d.Tenant, svc.Mine)
 		tickets.Get("", d.Owner, svc.List)
+		tickets.Get("/:id", svc.Get)
 		tickets.Post("", d.Tenant, svc.Create)
 		tickets.Patch("/:id/status", d.Owner, svc.UpdateStatus)
 	})

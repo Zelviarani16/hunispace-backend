@@ -19,6 +19,7 @@ func init() {
 		leases := api.Group("/leases", d.Auth)
 		leases.Get("/mine", d.Tenant, svc.Mine)
 		leases.Get("", d.Owner, svc.List)
+		leases.Get("/:id", svc.Get)
 		leases.Post("", d.Owner, svc.Create)
 		leases.Post("/:id/end", d.Owner, svc.End)
 	})

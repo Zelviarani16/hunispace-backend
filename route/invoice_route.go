@@ -18,8 +18,11 @@ func init() {
 		invoices := api.Group("/invoices", d.Auth)
 		invoices.Get("/mine", d.Tenant, svc.Mine)
 		invoices.Get("", d.Owner, svc.List)
+		invoices.Get("/:id", svc.Get)
+		invoices.Post("/mark-overdue", d.Owner, svc.MarkOverdue)
 		invoices.Post("", d.Owner, svc.Create)
 		invoices.Post("/:id/pay", d.Tenant, svc.Pay)
 		invoices.Post("/:id/verify", d.Owner, svc.Verify)
+		invoices.Post("/:id/reject", d.Owner, svc.Reject)
 	})
 }

@@ -14,7 +14,9 @@ func validTicketStatus(s string) bool {
 	return s == model.TicketOpen || s == model.TicketInProgress || s == model.TicketResolved
 }
 
-func validateTicketCreate(req *model.TicketCreateRequest) map[string]string {
+// ValidateTicketCreate memeriksa keluhan baru. Prioritas kosong dianggap
+// "medium" (req diubah). Map kosong berarti valid.
+func ValidateTicketCreate(req *model.TicketCreateRequest) map[string]string {
 	fields := map[string]string{}
 	if t := strings.TrimSpace(req.Title); t == "" || len(t) > 150 {
 		fields["title"] = "wajib diisi, maksimal 150 karakter"
@@ -31,7 +33,8 @@ func validateTicketCreate(req *model.TicketCreateRequest) map[string]string {
 	return fields
 }
 
-func validateTicketStatus(req model.TicketStatusRequest) map[string]string {
+// ValidateTicketStatus memeriksa permintaan perubahan status tiket.
+func ValidateTicketStatus(req model.TicketStatusRequest) map[string]string {
 	fields := map[string]string{}
 	if !validTicketStatus(req.Status) {
 		fields["status"] = "harus open, in_progress, atau resolved"

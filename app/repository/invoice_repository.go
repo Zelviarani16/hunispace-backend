@@ -6,27 +6,38 @@ import (
 	"hunispace/app/model"
 )
 
+// InvoiceRepository adalah kontrak akses data tagihan.
 type InvoiceRepository interface {
 	Create(ctx context.Context, db DBTX, inv model.Invoice) (model.Invoice, error)
 	FindByID(ctx context.Context, db DBTX, id int64) (model.Invoice, error)
 	FindAll(ctx context.Context, db DBTX, status string) ([]model.Invoice, error)
 	FindByTenant(ctx context.Context, db DBTX, tenantID int64) ([]model.Invoice, error)
+	// MarkPendingVerification mengubah tagihan milik tenantID dari unpaid/overdue
+	// menjadi pending_verification. Pemeriksaan status dan perubahan terjadi dalam
+	// SATU statement, sehingga double-submit hanya berhasil sekali.
+	// Mengembalikan false bila tidak ada baris yang berubah.
 	MarkPendingVerification(ctx context.Context, db DBTX, id, tenantID int64, method, proofURL string) (bool, error)
+	// MarkPaid mengubah pending_verification menjadi paid (atomik). false bila tidak ada baris yang berubah.
 	MarkPaid(ctx context.Context, db DBTX, id int64) (bool, error)
+	// Reject mengembalikan pending_verification menjadi unpaid beserta alasannya (atomik).
+	Reject(ctx context.Context, db DBTX, id int64, note string) (bool, error)
+	// MarkOverdue menandai tagihan unpaid yang lewat jatuh tempo; mengembalikan jumlah baris.
+	MarkOverdue(ctx context.Context, db DBTX) (int64, error)
 }
 
 type invoicePostgresRepository struct{}
 
 func NewInvoiceRepository() InvoiceRepository { return &invoicePostgresRepository{} }
 
-const invoiceColumns = "id, lease_id, invoice_number, billing_period, amount, due_date, payment_method, proof_url, status, paid_at, created_at"
+const invoiceColumns = "id, lease_id, invoice_number, billing_period, amount, due_date, payment_method, proof_url, status, paid_at, rejection_note, created_at"
 
-const invoiceColumnsAliased = "i.id, i.lease_id, i.invoice_number, i.billing_period, i.amount, i.due_date, i.payment_method, i.proof_url, i.status, i.paid_at, i.created_at"
+// Versi berawalan alias i. untuk query yang melakukan JOIN dengan leases.
+const invoiceColumnsAliased = "i.id, i.lease_id, i.invoice_number, i.billing_period, i.amount, i.due_date, i.payment_method, i.proof_url, i.status, i.paid_at, i.rejection_note, i.created_at"
 
 func scanInvoice(row rowScanner) (model.Invoice, error) {
 	var inv model.Invoice
 	err := row.Scan(&inv.ID, &inv.LeaseID, &inv.InvoiceNumber, &inv.BillingPeriod, &inv.Amount,
-		&inv.DueDate, &inv.PaymentMethod, &inv.ProofURL, &inv.Status, &inv.PaidAt, &inv.CreatedAt)
+		&inv.DueDate, &inv.PaymentMethod, &inv.ProofURL, &inv.Status, &inv.PaidAt, &inv.RejectionNote, &inv.CreatedAt)
 	return inv, err
 }
 
@@ -37,6 +48,7 @@ func (r *invoicePostgresRepository) Create(ctx context.Context, db DBTX, inv mod
 		 RETURNING `+invoiceColumns,
 		inv.LeaseID, inv.InvoiceNumber, inv.BillingPeriod, inv.Amount, inv.DueDate))
 	if err != nil {
+		// UNIQUE (lease_id, billing_period) menolak tagihan ganda pada periode yang sama.
 		if isUniqueViolation(err) {
 			return model.Invoice{}, ErrDuplicate
 		}
@@ -87,7 +99,8 @@ func (r *invoicePostgresRepository) MarkPendingVerification(
 ) (bool, error) {
 	tag, err := db.Exec(ctx,
 		`UPDATE invoices AS i
-		 SET status = 'pending_verification', payment_method = $3, proof_url = $4
+		 SET status = 'pending_verification', payment_method = $3, proof_url = $4,
+		     rejection_note = NULL
 		 FROM leases AS l
 		 WHERE i.id = $1
 		   AND l.id = i.lease_id
@@ -108,4 +121,25 @@ func (r *invoicePostgresRepository) MarkPaid(ctx context.Context, db DBTX, id in
 		return false, err
 	}
 	return tag.RowsAffected() == 1, nil
+}
+
+func (r *invoicePostgresRepository) Reject(ctx context.Context, db DBTX, id int64, note string) (bool, error) {
+	tag, err := db.Exec(ctx,
+		`UPDATE invoices
+		 SET status = 'unpaid', rejection_note = $2, payment_method = NULL, proof_url = NULL
+		 WHERE id = $1 AND status = 'pending_verification'`, id, note)
+	if err != nil {
+		return false, err
+	}
+	return tag.RowsAffected() == 1, nil
+}
+
+func (r *invoicePostgresRepository) MarkOverdue(ctx context.Context, db DBTX) (int64, error) {
+	tag, err := db.Exec(ctx,
+		`UPDATE invoices SET status = 'overdue'
+		 WHERE status = 'unpaid' AND due_date < CURRENT_DATE`)
+	if err != nil {
+		return 0, err
+	}
+	return tag.RowsAffected(), nil
 }

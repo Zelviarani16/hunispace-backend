@@ -6,7 +6,7 @@ import (
 	"hunispace/app/model"
 )
 
-func validateRoomCreate(req model.RoomCreateRequest) map[string]string {
+func ValidateRoomCreate(req model.RoomCreateRequest) map[string]string {
 	fields := map[string]string{}
 	if n := strings.TrimSpace(req.RoomNumber); n == "" || len(n) > 20 {
 		fields["room_number"] = "wajib diisi, maksimal 20 karakter"
@@ -20,7 +20,7 @@ func validateRoomCreate(req model.RoomCreateRequest) map[string]string {
 	return fields
 }
 
-func applyRoomUpdate(room *model.Room, req model.RoomUpdateRequest) map[string]string {
+func ApplyRoomUpdate(room *model.Room, req model.RoomUpdateRequest) map[string]string {
 	fields := map[string]string{}
 
 	if req.RoomType != nil && (strings.TrimSpace(*req.RoomType) == "" || len(*req.RoomType) > 50) {

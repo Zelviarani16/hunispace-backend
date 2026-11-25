@@ -34,7 +34,7 @@ func (s *LeaseService) Create(c *fiber.Ctx) error {
 	if err := helper.ParseBody(c, &req); err != nil {
 		return err
 	}
-	start, end, fields := validateLeaseRequest(req)
+	start, end, fields := ValidateLeaseRequest(req)
 	if len(fields) > 0 {
 		return helper.Validation(fields)
 	}
@@ -133,4 +133,20 @@ func (s *LeaseService) Mine(c *fiber.Ctx) error {
 		return helper.Internal(err)
 	}
 	return helper.Success(c, fiber.StatusOK, "kontrak saya berhasil diambil", leases)
+}
+
+func (s *LeaseService) Get(c *fiber.Ctx) error {
+	id, err := helper.ParseID(c, "id")
+	if err != nil {
+		return err
+	}
+	lease, err := s.leases.FindByID(c.UserContext(), s.pool, id)
+	if err != nil {
+		return lookupError(err, "kontrak")
+	}
+	auth := helper.CurrentUser(c)
+	if auth.Role != model.RoleOwner && lease.TenantID != auth.UserID {
+		return helper.NotFound("kontrak tidak ditemukan")
+	}
+	return helper.Success(c, fiber.StatusOK, "kontrak berhasil diambil", lease)
 }

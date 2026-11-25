@@ -1,9 +1,10 @@
-package service
+package tests
 
 import (
 	"testing"
 
 	"hunispace/app/model"
+	"hunispace/app/service"
 )
 
 func strPtr(s string) *string     { return &s }
@@ -27,7 +28,7 @@ func TestValidateRoomCreate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			req := valid
 			tt.mutate(&req)
-			fields := validateRoomCreate(req)
+			fields := service.ValidateRoomCreate(req)
 			if tt.wantField == "" && len(fields) != 0 {
 				t.Fatalf("seharusnya valid: %v", fields)
 			}
@@ -43,7 +44,7 @@ func TestValidateRoomCreate(t *testing.T) {
 func TestApplyRoomUpdate(t *testing.T) {
 	t.Run("hanya field yang dikirim yang berubah", func(t *testing.T) {
 		room := model.Room{RoomType: "Standar", MonthlyPrice: 1000000, Status: model.RoomAvailable}
-		fields := applyRoomUpdate(&room, model.RoomUpdateRequest{MonthlyPrice: floatPtr(1200000)})
+		fields := service.ApplyRoomUpdate(&room, model.RoomUpdateRequest{MonthlyPrice: floatPtr(1200000)})
 		if len(fields) != 0 {
 			t.Fatalf("seharusnya valid: %v", fields)
 		}
@@ -54,7 +55,7 @@ func TestApplyRoomUpdate(t *testing.T) {
 
 	t.Run("status occupied tidak boleh diatur lewat PATCH", func(t *testing.T) {
 		room := model.Room{Status: model.RoomAvailable}
-		fields := applyRoomUpdate(&room, model.RoomUpdateRequest{Status: strPtr(model.RoomOccupied)})
+		fields := service.ApplyRoomUpdate(&room, model.RoomUpdateRequest{Status: strPtr(model.RoomOccupied)})
 		if _, ok := fields["status"]; !ok {
 			t.Fatal("seharusnya ditolak")
 		}
@@ -65,7 +66,7 @@ func TestApplyRoomUpdate(t *testing.T) {
 
 	t.Run("kamar yang sedang ditempati tidak boleh diubah statusnya", func(t *testing.T) {
 		room := model.Room{Status: model.RoomOccupied}
-		fields := applyRoomUpdate(&room, model.RoomUpdateRequest{Status: strPtr(model.RoomMaintenance)})
+		fields := service.ApplyRoomUpdate(&room, model.RoomUpdateRequest{Status: strPtr(model.RoomMaintenance)})
 		if _, ok := fields["status"]; !ok {
 			t.Fatal("seharusnya ditolak")
 		}
@@ -73,7 +74,7 @@ func TestApplyRoomUpdate(t *testing.T) {
 
 	t.Run("available ke maintenance diperbolehkan", func(t *testing.T) {
 		room := model.Room{Status: model.RoomAvailable}
-		fields := applyRoomUpdate(&room, model.RoomUpdateRequest{Status: strPtr(model.RoomMaintenance)})
+		fields := service.ApplyRoomUpdate(&room, model.RoomUpdateRequest{Status: strPtr(model.RoomMaintenance)})
 		if len(fields) != 0 || room.Status != model.RoomMaintenance {
 			t.Fatalf("seharusnya berhasil: %v, %+v", fields, room)
 		}

@@ -50,7 +50,7 @@ func (s *RoomService) Create(c *fiber.Ctx) error {
 	if err := helper.ParseBody(c, &req); err != nil {
 		return err
 	}
-	if fields := validateRoomCreate(req); len(fields) > 0 {
+	if fields := ValidateRoomCreate(req); len(fields) > 0 {
 		return helper.Validation(fields)
 	}
 
@@ -84,7 +84,7 @@ func (s *RoomService) Update(c *fiber.Ctx) error {
 	if err != nil {
 		return lookupError(err, "kamar")
 	}
-	if fields := applyRoomUpdate(&room, req); len(fields) > 0 {
+	if fields := ApplyRoomUpdate(&room, req); len(fields) > 0 {
 		return helper.Validation(fields)
 	}
 

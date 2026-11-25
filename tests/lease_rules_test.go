@@ -1,9 +1,10 @@
-package service
+package tests
 
 import (
 	"testing"
 
 	"hunispace/app/model"
+	"hunispace/app/service"
 )
 
 func TestValidateLeaseRequest(t *testing.T) {
@@ -27,7 +28,7 @@ func TestValidateLeaseRequest(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			req := valid
 			tt.mutate(&req)
-			_, _, fields := validateLeaseRequest(req)
+			_, _, fields := service.ValidateLeaseRequest(req)
 			if tt.wantField == "" && len(fields) != 0 {
 				t.Fatalf("seharusnya valid: %v", fields)
 			}

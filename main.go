@@ -18,6 +18,7 @@ import (
 	"hunispace/app/service"
 	"hunispace/config"
 	"hunispace/database"
+	_ "hunispace/docs"
 	"hunispace/helper"
 	"hunispace/middleware"
 	"hunispace/route"
@@ -41,7 +42,7 @@ func main() {
 	defer pool.Close()
 
 	if config.GetEnv("AUTO_MIGRATE", "true") == "true" {
-		if err := database.Migrate(ctx, pool, config.GetEnv("MIGRATIONS_DIR", "migrations")); err != nil {
+		if err := database.Migrate(ctx, pool, config.GetEnv("MIGRATIONS_DIR", "")); err != nil {
 			log.Fatalf("migration gagal: %v", err)
 		}
 		log.Println("migration selesai")

@@ -41,6 +41,8 @@ func Setup(app *fiber.App, d Deps) {
 		return helper.Success(c, fiber.StatusOK, "HuniSpace berjalan", fiber.Map{"database": "ok"})
 	})
 
+	SetupSwagger(app)
+
 	api := app.Group("/api/v1")
 	for _, r := range registrars {
 		r(api, d)

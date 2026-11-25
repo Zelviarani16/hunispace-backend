@@ -8,7 +8,7 @@ import (
 
 const dateLayout = "2006-01-02"
 
-func validateLeaseRequest(req model.LeaseCreateRequest) (start, end time.Time, fields map[string]string) {
+func ValidateLeaseRequest(req model.LeaseCreateRequest) (start, end time.Time, fields map[string]string) {
 	fields = map[string]string{}
 
 	if req.TenantID <= 0 {
